@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "FriendlyLoan": {
+      "applicationId": "ovgBZvPfAK3cY3VZx0aZ8sXGLKz9IFViTH28kwGo"
+    },
+    "_default": {
+      "link": "FriendlyLoan"
+    }
+  }
+}

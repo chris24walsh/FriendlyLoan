@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js">
+<!--<![endif]-->
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title></title>
+<meta name="description" content="">
+<meta name="viewport" content="width=device-width">
+<script src="http://www.parsecdn.com/js/parse-1.2.19.min.js"></script>
+<!--<style>
+section {
+    width: 80%;
+    height: 200px;
+    margin: auto;
+    padding: 10px;
+}
+div#leftDiv {
+    width: 15%;
+    height: 200px;
+    float: left;
+}
+div#rightDiv {
+    margin-left: 15%;
+    height: 200px;
+}
+</style>-->
+</head>
+<body style='background-color: #C5FF52'>
+
+<!--[if lt IE 7]>
+        <p class="chromeframe">You are using an <strong>outdated</strong> 
+        browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> 
+        or <a href="http://www.google.com/chromeframe/?redirect=true">activate 
+            Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+<!-- Add your site or application content here -->
+	
+	<button id="logoutButton" style='position:absolute; top:0; left:0; visibility:visible' onClick='logout();'>Log Out</button>-->
+	<div id='loggedUser'>Logged in: --</div>
+	<br><br>
+	<section>
+		<div id='centerDiv' style='text-align:center'>
+			<p><h1 id='test'>Welcome to FriendlyLoan</h1></p>
+			<p><h2>The easy, friendly way to keep track of loans</h2></p>
+		
+			<button id='createLoan' disabled onClick='document.getElementById("form").style.visibility = "visible";document.getElementById("createLoan").style.visibility = "hidden";'>Create Loan</button>
+			<form id='form' action='javascript:doForm();' style='visibility:hidden'>
+				Your name: <input type='text' name='name'></input></p>
+				You want to Borrow/Lend: <select name='type'>
+					<option value"borrow">borrow</option>
+					<option value"lend">lend</option>
+				</select></p>
+				Amount: <input type='text' name='amount'></input></p>
+				Currency: <select name='currency'>
+					<option value"euro">euro</option>
+					<option value"dollars">dollars</option>
+					<option value"sterling">sterling</option>
+				</select></p>
+				Friend's Email: <input type='text' name='email'></input></p>
+				<input type='submit'></input></p>
+			</form>
+		</div>
+		
+		<div id='loanList' style='text-align:center'>
+			<p>List of all current loans</p>
+		</div>
+	</section>
+
+	<script>
+
+		<!--############Initialize the Parse app, the Facebook app, and the Mailgun Cloud module#############-->
+
+		Parse.initialize( 'ovgBZvPfAK3cY3VZx0aZ8sXGLKz9IFViTH28kwGo', 'oLpcGjK63HfaNKBmrR8CjtXGA2Sb0ajIFa9qakj6' );
+		
+		//First check if page was requested from confirmation email, thus carrying URI token
+		var token = window.location.search.substring(1);
+		if (token) {
+			newToken = Number(token);
+			var Loan = Parse.Object.extend("Loan");
+			var check = new Parse.Query(Loan);
+			check.equalTo('token', newToken);
+			check.find({}).then(function(result) {
+				//if found a match for the token, tell them that loan is confirmed, would they like to sign up
+				if (result[0]) {
+					if (result[0].get('lender') == '') alert("Loan confirmed. We will notify your friend " + result[0].get('borrower'));
+					else alert("Loan confirmed. We will notify your friend " + result[0].get('lender'));
+				}
+				var a = confirm("Would you like to sign up to FriendlyLoan? Its super easy to keep track of this and other loans between you and your friends!");
+				if (a) {
+					signup();
+				}
+			}, function(error) {
+				alert("Garbage URI token");
+			});
+		}
+		
+		//Check login status
+		if (Parse.User.current()) {
+			document.getElementById('loggedUser').innerHTML = "Logged in: " + Parse.User.current().get("username");
+			document.getElementById('createLoan').disabled = false;
+			document.getElementById('loanList').innerHTML += "<p>40 euro lent to Pat<button>Mark loan as repaid</button></p>";
+		}
+		else if (!token) {
+			alert("You must log in to use this app");
+			login();
+		}
+		
+		
+		//Functions
+		
+		function login() {
+			var username = prompt("Email: ");
+			var password = prompt("Password: ");
+			Parse.User.logIn(username, password, {
+				success: function(success) {
+					//Logged in
+					document.getElementById('loggedUser').innerHTML = "Logged in: " + Parse.User.current().get("username");
+					document.getElementById('createLoan').disabled = false;
+				}, error: function(error) {
+					//Sign up User
+					var a = confirm("You are not signed up for this app. Sign up now?");
+					if (a) signup();
+				}
+			});
+		}
+		
+		function logout() {
+			Parse.User.logOut();
+			alert("You have logged out");
+			document.getElementById('loggedUser').innerHTML = "Logged in: --"
+			document.getElementById('createLoan').disabled = true;
+		}
+		
+		function signup() {
+			var username = prompt("Email: ");
+			var password = prompt("Password: ");
+			var user = new Parse.User();
+			user.set("username", username);
+			user.set("password", password);
+			user.signUp(null, {
+				success: function(success) {
+					alert("User details saved");
+					document.getElementById('loggedUser').innerHTML = "Logged in: " + Parse.User.current().get("username");
+					document.getElementById('createLoan').disabled = false;
+				}, error: function(error) {
+					alert("Sign up failed");
+				}
+			});
+		}
+					
+		
+		function doForm() {
+			//Send email with loan details, and link to verify
+			var name = document.forms["form"]["name"].value;
+			var type = document.forms["form"]["type"].value;
+			var amount = document.forms["form"]["amount"].value;
+			var currency = document.forms["form"]["currency"].value;
+			var toFrom;
+			if (type == 'borrow') toFrom = 'from';
+			else toFrom = 'to';
+			var message = "Your friend " + name + " wants to " + type + " " + amount + " " + currency + " " + toFrom + " you.";
+			//Create loan token for this loan
+			var token = Math.floor((Math.random() * 1000000));
+			var Loan = Parse.Object.extend("Loan");
+			var loan = new Loan();
+			loan.set('token', token);
+			if (type == 'borrow') {
+				loan.set('borrower', name);
+				loan.set('lender', '');
+			}
+			else {
+				loan.set('lender', name);
+				loan.set('borrower', '');
+			}
+			loan.set('amount', amount);
+			loan.set('currency', currency);
+			loan.save({});
+			//Complete message with link, and send mail
+			message += "\nClick here to confirm this loan: http://friendlyloan.parseapp.com/?" + token;
+			mail(document.forms["form"]["email"].value, message);
+			//Hide form, and make button reappear
+			document.getElementById("form").style.visibility = "hidden";
+			document.getElementById("createLoan").style.visibility = "visible";
+			
+		}
+		
+		function writeLoans() {
+			document.write("<p>Hi</p>");
+		}
+		
+		//Cloud functions
+		
+		function mail(email, message) {
+			Parse.Cloud.run('sendMail', {email: email, message: message}, {
+				success: function(success) {
+					//alert("Email sent");
+				}, error: function(error) {
+					alert("Failed to send");
+				}
+			});
+		}
+		
+	</script>                                                                                           
+</body>                                                                                             
+</html> 
